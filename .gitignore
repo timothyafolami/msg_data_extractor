@@ -1,0 +1,32 @@
+.DS_Store
+
+# Sample or client input data
+MSG_Files/
+
+# Generated outputs
+Extracted_Photos/
+Extracted_Photos.zip
+extraction_log.xlsx
+
+# Python cache and bytecode
+__pycache__/
+*.py[cod]
+
+# Local Python environments
+.venv/
+venv/
+env/
+
+# Tool caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Packaging artifacts
+build/
+dist/
+*.egg-info/
+
+# Editor settings
+.vscode/
+.idea/

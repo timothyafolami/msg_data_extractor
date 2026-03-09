@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "msg-photo-extractor"
+version = "0.1.0"
+description = "Extract photo attachments from Outlook MSG files and rename them by applicant name."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "openpyxl>=3.1",
+]
+
+[project.optional-dependencies]
+web = [
+  "streamlit>=1.41",
+]
+
+[project.scripts]
+msg-photo-extractor = "msg_photo_extractor.cli:main"
+
+[tool.setuptools]
+packages = ["msg_photo_extractor"]
