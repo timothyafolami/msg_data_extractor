@@ -1,48 +1,54 @@
-# MSG Photo Extractor
+# MSG Data Extractor
 
-Extracts photo attachments from Outlook `.msg` files and renames them using the applicant's name found in the email body.
+Processes Outlook `.msg` files from a local folder tree, extracts image attachments, and writes applicant name, email, and phone into `extraction_log.xlsx`.
 
-## Install
+This project is intended for local batch processing on the client machine.
 
-```bash
-pip install .
-```
+## Client Setup
 
-This installs the `msg-photo-extractor` command.
-
-For a simple client-machine setup, install the web app dependencies with:
+On macOS or Linux, run the setup script once:
 
 ```bash
-pip install -r requirements.txt
+./setup_local.sh
 ```
 
-To run the ZIP upload/download web app:
+That script creates `.venv`, upgrades `pip`, and installs the dependencies from `requirements.txt`.
+
+On Windows, run:
+
+```bat
+setup_local.bat
+```
+
+## Client Processing
+
+On macOS or Linux, run the processor with an input folder and optional output folder:
 
 ```bash
-pip install '.[web]'
-streamlit run streamlit_app.py
+./process_folder.sh /path/to/client_folder
+./process_folder.sh /path/to/client_folder /path/to/output_folder
 ```
 
-## Usage
+On Windows, run:
+
+```bat
+process_folder.bat P:\path\to\client_folder
+process_folder.bat P:\path\to\client_folder P:\path\to\output_folder
+```
+
+Behavior:
+
+- recursively scans all `.msg` files under the input folder
+- preserves subfolder structure in the output folder
+- extracts photos
+- writes `extraction_log.xlsx` with name, email, phone, saved files, and status
+
+If no output folder is supplied, the script creates one next to the project folder using the input folder name plus `_extracted`.
+
+## Direct Python Usage
+
+The underlying CLI still works directly:
 
 ```bash
-msg-photo-extractor /path/to/MSG_Files -o /path/to/output
+python extract_msg_photos.py /path/to/client_folder --output-folder /path/to/output
 ```
-
-By default, the tool scans folders recursively and preserves subfolder structure in the output.
-
-## Options
-
-- `--no-recursive`: only scan the top-level input folder.
-- `--flatten-output`: save all photos into a single output folder.
-
-## Web App Workflow
-
-1. Zip the client folder that contains the `.msg` files and any subfolders.
-2. Open the Streamlit app.
-3. Upload the ZIP file.
-4. Download the processed ZIP, which includes extracted photos and `extraction_log.xlsx`.
-
-## Local script usage
-
-The repository also keeps `extract_msg_photos.py` as a wrapper script for direct use during development.
