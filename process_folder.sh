@@ -44,4 +44,10 @@ if [[ -z "$OUTPUT_FOLDER" ]]; then
   OUTPUT_FOLDER="$SCRIPT_DIR/${INPUT_BASENAME}_extracted"
 fi
 
+WORKERS="${WORKERS:-}"
+
+if [[ -n "$WORKERS" ]]; then
+  exec "$VENV_PYTHON" "$SCRIPT_DIR/extract_msg_photos.py" "$INPUT_FOLDER" --output-folder "$OUTPUT_FOLDER" --workers "$WORKERS"
+fi
+
 exec "$VENV_PYTHON" "$SCRIPT_DIR/extract_msg_photos.py" "$INPUT_FOLDER" --output-folder "$OUTPUT_FOLDER"

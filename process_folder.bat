@@ -26,7 +26,11 @@ if "%OUTPUT_FOLDER%"=="" (
     for %%I in ("%INPUT_FOLDER%") do set "OUTPUT_FOLDER=%SCRIPT_DIR%\%%~nxI_extracted"
 )
 
-call "%VENV_PYTHON%" "%SCRIPT_DIR%\extract_msg_photos.py" "%INPUT_FOLDER%" --output-folder "%OUTPUT_FOLDER%"
+if defined WORKERS (
+    call "%VENV_PYTHON%" "%SCRIPT_DIR%\extract_msg_photos.py" "%INPUT_FOLDER%" --output-folder "%OUTPUT_FOLDER%" --workers %WORKERS%
+) else (
+    call "%VENV_PYTHON%" "%SCRIPT_DIR%\extract_msg_photos.py" "%INPUT_FOLDER%" --output-folder "%OUTPUT_FOLDER%"
+)
 exit /b %ERRORLEVEL%
 
 :usage

@@ -36,6 +36,21 @@ process_folder.bat P:\path\to\client_folder
 process_folder.bat P:\path\to\client_folder P:\path\to\output_folder
 ```
 
+For large batches, you can set the worker count explicitly.
+
+macOS/Linux:
+
+```bash
+WORKERS=8 ./process_folder.sh /path/to/client_folder
+```
+
+Windows:
+
+```bat
+set WORKERS=8
+process_folder.bat P:\path\to\client_folder
+```
+
 Behavior:
 
 - recursively scans all `.msg` files under the input folder

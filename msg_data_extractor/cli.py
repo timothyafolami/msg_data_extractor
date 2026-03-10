@@ -31,6 +31,12 @@ def build_parser(default_msg_folder: Path | None = None, default_output_folder: 
         action="store_true",
         help="Write all extracted photos into one output folder instead of preserving subfolders.",
     )
+    parser.add_argument(
+        "--workers",
+        type=int,
+        default=None,
+        help="Number of worker threads to use. Defaults to a CPU-based value.",
+    )
     return parser
 
 
@@ -57,6 +63,7 @@ def main(
             output_folder=args.output_folder,
             recursive=not args.no_recursive,
             preserve_structure=not args.flatten_output,
+            workers=args.workers,
         )
     except (FileNotFoundError, NotADirectoryError) as exc:
         parser.error(str(exc))

@@ -1,11 +1,17 @@
+import os
 import logging
 import re
+import threading
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 from .ole2 import OLE2Reader
 from .reporting import write_excel_log
 
 log = logging.getLogger(__name__)
+
+_folder_locks_guard = threading.Lock()
+_folder_locks: dict[str, threading.Lock] = {}
 
 PROP_BODY_PLAIN = "__substg1.0_1000001F"
 PROP_ATTACH_DATA = "__substg1.0_37010102"
@@ -129,6 +135,16 @@ def unique_path(folder: Path, base: str, ext: str) -> Path:
     return candidate
 
 
+def _get_folder_lock(folder: Path) -> threading.Lock:
+    folder_key = str(folder.resolve())
+    with _folder_locks_guard:
+        lock = _folder_locks.get(folder_key)
+        if lock is None:
+            lock = threading.Lock()
+            _folder_locks[folder_key] = lock
+    return lock
+
+
 def _is_supported_msg_path(path: Path, root_dir: Path) -> bool:
     if not path.is_file() or path.suffix.lower() != ".msg":
         return False
@@ -194,11 +210,13 @@ def process_msg(msg_path: Path, output_folder: Path) -> dict:
         image_attachments.append((data, ext))
 
     total_images = len(image_attachments)
+    folder_lock = _get_folder_lock(output_folder)
 
     for image_count, (data, ext) in enumerate(image_attachments, 1):
         base = safe if total_images == 1 else f"{safe}_{image_count}"
-        out_path = unique_path(output_folder, base, ext)
-        out_path.write_bytes(data)
+        with folder_lock:
+            out_path = unique_path(output_folder, base, ext)
+            out_path.write_bytes(data)
         result["saved_files"].append(out_path.name)
         result["saved_paths"].append(str(out_path))
 
@@ -213,6 +231,7 @@ def run(
     output_folder: str | Path,
     recursive: bool = True,
     preserve_structure: bool = True,
+    workers: int | None = None,
 ) -> dict:
     msg_dir = Path(msg_folder).expanduser().resolve()
     out_dir = Path(output_folder).expanduser().resolve()
@@ -233,23 +252,54 @@ def run(
     log.info("Found %s .msg files in %s", total, msg_dir)
     log.info("Output folder: %s", out_dir)
 
-    results = []
+    if workers is None:
+        workers = min(12, max(1, (os.cpu_count() or 4)))
+    workers = max(1, workers)
+    log.info("Worker count: %s", workers)
+
+    jobs = []
     for index, msg_path in enumerate(msg_files, 1):
         rel_parent = msg_path.parent.relative_to(msg_dir)
         source_folder = "." if str(rel_parent) == "." else rel_parent.as_posix()
         target_dir = out_dir / rel_parent if preserve_structure and str(rel_parent) != "." else out_dir
         target_dir.mkdir(parents=True, exist_ok=True)
 
-        log.info("[%s/%s]  %s", index, total, msg_path.relative_to(msg_dir).as_posix())
-        result = process_msg(msg_path, target_dir)
-        result["source_folder"] = source_folder
+        jobs.append(
+            {
+                "index": index,
+                "msg_path": msg_path,
+                "source_folder": source_folder,
+                "target_dir": target_dir,
+                "display_path": msg_path.relative_to(msg_dir).as_posix(),
+            }
+        )
+
+    def run_job(job: dict) -> dict:
+        result = process_msg(job["msg_path"], job["target_dir"])
+        result["source_folder"] = job["source_folder"]
         result["saved_paths"] = [Path(path).relative_to(out_dir).as_posix() for path in result["saved_paths"]]
-        results.append(result)
+        result["index"] = job["index"]
+        result["display_path"] = job["display_path"]
+        return result
+
+    if workers == 1:
+        results = [run_job(job) for job in jobs]
+    else:
+        with ThreadPoolExecutor(max_workers=workers) as executor:
+            results = list(executor.map(run_job, jobs))
+
+    results.sort(key=lambda result: result["index"])
+
+    for result in results:
+        log.info("[%s/%s]  %s", result["index"], total, result["display_path"])
 
         if result["saved_files"]:
             log.info("  Saved for %s -> %s", result["applicant_name"], ", ".join(result["saved_paths"]))
         else:
             log.warning("  Skipped: %s", result["error"])
+
+        result.pop("index", None)
+        result.pop("display_path", None)
 
     log_path = write_excel_log(results, out_dir)
     ok_count = sum(1 for result in results if result["saved_files"])
